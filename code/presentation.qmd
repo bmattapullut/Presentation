@@ -133,7 +133,7 @@ aquarium) # Clean up the environment
 # Creating clean_name function
 
 ```{r}
-# Helper function to make column names clean snake_case 
+# Helper function to make column names clean case 
 clean_name <- function(df) {
   names(df) <- names(df) |>
     str_to_lower() |>
@@ -503,3 +503,239 @@ p3
 ggsave(here::here("output/fig3_density_vs_current_20m.png"), p3, width = 8, height = 5, dpi = 300)
 ```
 
+# comparing gorgonian size with nutrient at each site
+
+```{r}
+
+# 1. Inspect column names in your cleaned dive & nutrient tables first
+# names(dive_clean)
+# names(nutrients_clean)
+
+# 2. Calculate colony surface-area proxy per colony, then summarize per site
+# Adjust `height` and `width` to match your exact cleaned column names
+colony_size_site <- dive_clean |>
+  filter(!is.na(height), !is.na(width), height > 0, width > 0) |>
+  mutate(
+    colony_area_proxy = height * width # e.g., cm² if height & width are in cm
+  ) |>
+  group_by(island, site) |>
+  summarise(
+    n_colonies = n(),
+    mean_height = mean(height, na.rm = TRUE),
+    se_height = sd(height, na.rm = TRUE) / sqrt(n_colonies),
+    mean_width = mean(width, na.rm = TRUE),
+    se_width = sd(width, na.rm = TRUE) / sqrt(n_colonies),
+    mean_area = mean(colony_area_proxy, na.rm = TRUE),
+    se_area = sd(colony_area_proxy, na.rm = TRUE) / sqrt(n_colonies),
+    .groups = "drop"
+  )
+```
+
+## graph
+
+```{r}
+p_size_site <- colony_size_site |>
+  mutate(site = fct_reorder(site, mean_area)) |>
+  ggplot(aes(x = mean_area, y = site, color = island)) +
+  geom_point(size = 3.2) +
+  geom_errorbarh(
+    aes(xmin = pmax(0, mean_area - se_area), xmax = mean_area + se_area),
+    height = 0.25,
+    alpha = 0.85
+  ) +
+  labs(
+    x = "Mean Colony Area Proxy (Height × Width, mean ± SE)",
+    y = "Site",
+    title = "Gorgonian Colony Size Across Survey Sites",
+    subtitle = "Mauritius and Rodrigues reef sites ordered by mean surface-area proxy",
+    color = "Island"
+  ) +
+  theme_minimal(base_size = 10) +
+  theme(legend.position = "top")
+
+p_size_site
+ggsave(here::here("output/fig_colony_area_by_site.png"), p_size_site, width = 8, height = 5.5, dpi = 300)
+```
+#comparing no of colonies per site
+```{r}
+library(tidyverse)
+
+# Option A: If using `colony_size_site` (sites with measured colonies)
+# colony_counts <- colony_size_site |>
+#   select(island, site, n_colonies)
+
+# Option B: Compute colony counts directly from `dive_clean` across all sites
+# (Replace `colony_id` with your colony column, or use `n()` if each row is one colony)
+colony_counts <- dive_clean |>
+  group_by(island, site) |>
+  summarise(
+    n_colonies = sum(!is.na(height) | !is.na(width)), # or `n()` if 1 row = 1 colony
+    .groups = "drop"
+  )
+
+p_colony_count <- colony_counts |>
+  mutate(site = fct_reorder(site, n_colonies)) |>
+  ggplot(aes(x = n_colonies, y = site, fill = island)) +
+  geom_col(width = 0.65, alpha = 0.9) +
+  geom_text(
+    aes(label = n_colonies),
+    hjust = -0.25,
+    size = 3.6,
+    color = "grey20"
+  ) +
+  scale_x_continuous(expand = expansion(mult = c(0, 0.12))) +
+  labs(
+    x = "Number of Gorgonian Colonies",
+    y = NULL,
+    title = "Gorgonian Colony Count Across Survey Sites",
+    fill = "Island"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    legend.position = "top",
+    panel.grid.major.y = element_blank()
+  )
+
+p_colony_count
+ggsave(here::here("output/fig_colony_count_by_site.png"), p_colony_count, width = 8, height = 5.5, dpi = 300)
+```
+
+#comparing gorgonian colonies with nutrient data
+
+```{r}
+# 1. Compute colony counts per site (includes 0-colony sites if present in dive_clean)
+colony_counts <- dive_clean |>
+  group_by(island, site) |>
+  summarise(
+    n_colonies = sum(!is.na(height) | !is.na(width)), # or `n()` if 1 row = 1 colony
+    .groups = "drop"
+  )
+
+# 2. Join with cleaned site-level nutrient / Chl-a data and reshape to long format
+# Update the column names in `c(...)` to match `nutrients_clean`
+count_nutrients_long <- colony_counts |>
+  left_join(nutrients_clean, by = c("island", "site")) |>
+  pivot_longer(
+    cols = c(nitrate, phosphate, silicate, chl_a), # <-- edit to match your exact column names
+    names_to = "nutrient_metric",
+    values_to = "nutrient_value"
+  ) |>
+  filter(!is.na(n_colonies), !is.na(nutrient_value))
+
+# 3. Plot Number of Colonies vs. Nutrient Values across sites
+p_count_nutrients <- count_nutrients_long |>
+  ggplot(aes(x = nutrient_value, y = n_colonies, color = island)) +
+  geom_point(size = 3.2, alpha = 0.9) +
+  facet_wrap(~ nutrient_metric, scales = "free_x") +
+  labs(
+    x = "Lab Nutrient / Chlorophyll-a Concentration",
+    y = "Number of Gorgonian Colonies",
+    title = "Gorgonian Colony Count vs. Lab Water Chemistry by Site",
+    subtitle = "Each point represents a survey site in Mauritius or Rodrigues",
+    color = "Island"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    legend.position = "top",
+    strip.text = element_text(face = "bold")
+  )
+
+p_count_nutrients
+ggsave(here::here("output/fig_colony_count_vs_nutrients.png"), p_count_nutrients, width = 9.5, height = 6, dpi = 300)
+```
+
+#comparing chlorophyll a conc with no of colonies
+
+```{r}
+# 1. Compute colony counts per site (keeps 0-colony sites so "presence/absence" is visible)
+colony_counts <- dive_clean |>
+  group_by(island, site) |>
+  summarise(
+    n_colonies = sum(!is.na(height) | !is.na(width)), # or `n()` if 1 row = 1 colony
+    .groups = "drop"
+  )
+
+# 2. Join with cleaned site-level nutrient / Chl-a data
+# Replace `chl_a` below with your exact cleaned chlorophyll-a column name
+count_chla <- colony_counts |>
+  left_join(nutrients_clean, by = c("island", "site")) |>
+  filter(!is.na(n_colonies), !is.na(chl_a))
+
+# 3. Quick non-parametric correlation check (Spearman is safer for small site counts & skewed data)
+cor.test(count_chla$chl_a, count_chla$n_colonies, method = "spearman", exact = FALSE)
+
+# 4. Plot Gorgonian Colony Count vs. Chlorophyll-a Concentration
+p_count_chla <- count_chla |>
+  ggplot(aes(x = chl_a, y = n_colonies)) +
+  geom_smooth(
+    method = "lm",
+    se = TRUE,
+    color = "grey40",
+    linetype = "dashed",
+    linewidth = 0.8
+  ) +
+  geom_point(aes(color = island), size = 3.5, alpha = 0.92) +
+  labs(
+    x = "Lab Chlorophyll-a Concentration (phytoplankton proxy)",
+    y = "Number of Gorgonian Colonies",
+    title = "Gorgonian Colony Abundance vs. Chlorophyll-a Across Sites",
+    subtitle = "(dashed line = overall linear trend ± SE)",
+    color = "Island"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "top")
+
+p_count_chla
+ggsave(here::here("output/fig_colony_count_vs_chla.png"), p_count_chla, width = 8, height = 5.5, dpi = 300)
+```
+
+#comparing colony count at depth
+
+```{r}
+
+
+# 1. Summarize colony count and depth per site
+# Adjust `depth`, `height`, and `width` to match your cleaned column names in `dive_clean`
+site_depth_counts <- dive_clean |>
+  group_by(island, site) |>
+  summarise(
+    n_colonies = sum(!is.na(height) | !is.na(width)), # or `n()` if 1 row = 1 colony
+    mean_depth = mean(depth, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  filter(!is.na(n_colonies), !is.na(mean_depth))
+
+# 2. Plot Colony Count vs. Depth with a neat boxed legend on the right
+p_count_depth <- site_depth_counts |>
+  ggplot(aes(x = mean_depth, y = n_colonies, color = site, shape = island)) +
+  geom_point(size = 4, alpha = 0.95) +
+   scale_shape_manual(values = c(16, 17)) + # solid circle & solid triangle for clear contrast
+  scale_y_continuous(expand = expansion(mult = c(0.05, 0.16))) +
+  scale_x_continuous(expand = expansion(mult = c(0.08, 0.08))) +
+  labs(
+    x = "Mean Survey Depth (m)",
+    y = "Number of Gorgonian Colonies",
+    title = "Gorgonian Colony Count vs. Depth by Survey Site",
+    subtitle = "Site indicated by color; island indicated by point shape",
+    color = "Site",
+    shape = "Island"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    legend.position = "right",
+    legend.justification = "top",
+    legend.box = "vertical",
+    legend.box.background = element_rect(
+      fill = "white",
+      color = "grey75",
+      linewidth = 0.6
+    ),
+    legend.box.margin = margin(6, 6, 6, 6),
+    legend.key = element_rect(fill = "white", color = NA),
+    legend.title = element_text(face = "bold", size = 10.5),
+    legend.text = element_text(size = 9.5)
+  )
+
+p_count_depth
+ggsave(here::here("output/fig_colony_count_vs_depth.png"), p_count_depth, width = 9.5, height = 5.8, dpi = 300)
+```
