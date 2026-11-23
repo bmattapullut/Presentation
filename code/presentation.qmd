@@ -1,0 +1,88 @@
+---
+title: "Baseline Ecology of Mascarene reefs: Spatial and Morphometric Analysis of Mauritius and Rodrigues Gorgonians "
+author: "Brihatee Mattapullut"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+ html_document:
+    code_folding: show
+    collapse: no
+    df_print: paged
+    fig_caption: yes
+    fig_height: 6
+    fig_width: 10
+    highlight: textmate
+    theme: spacelab
+    toc: yes
+    toc_float: yes
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+# Set options, housekeeping
+knitr::opts_chunk$set(
+	echo = TRUE,
+	include = TRUE,
+	message = FALSE,
+	warning = FALSE)
+```
+
+
+# Housekeeping
+
+```{r housekeeping}
+#| message: true
+#| warning: false
+rm(list = ls())
+```
+
+# Packages
+```{r packages echo = FALSE}
+library(tidyverse) # Inc dplyr, ggplot2, lubridate etc
+library(readxl) # For reading in excel files
+```
+
+
+#Introduction
+
+Gorgonian octocorals are important structural and suspension-feeding components of tropical coral reefs, yet baseline ecological data across many Western Indian Ocean reef systems remain sparse. This project builds on preliminary, unpublished Bachelor of Science with Honours field surveys conducted across reef sites in Mauritius and Rodrigues, where no prior quantitative baseline existed for these surveyed locations.
+
+Originally, these dive survey logs, colony measurements, and water-column nutrient/chlorophyll-a records were stored in fragmented spreadsheets and analyzed through siloed, manual workflows. Here, that preliminary baseline dataset is migrated into a reproducible `tidyverse` pipeline in R and paired with Google Earth Engine (GEE) spatial oceanography (`HYCOM` surface current speed) to:
+
+1. Characterize gorgonian abundance, coral cover, and colony morphometrics (height and width) across sites in Mauritius and Rodrigues;
+2. Examine relationships between gorgonian patterns, water-column nutrients/chlorophyll-a, and regional current speed; and
+3. Document a transparent methodological shift from manual, spreadsheet-based undergraduate analyses toward reproducible, code-driven marine data science.
+
+
+# Loading files
+
+## Main data
+```{r}
+#dive data
+dive <- read_csv(here::here("data/raw_data_dive.csv"))
+
+#transect data
+transect <- read_csv(here::here("data/transect_data.csv"))
+
+#GEE current data
+gee_currents <- read_csv(here::here("data/mascarene_gee_currents_2024.csv"))
+```
+
+## Nutrient data
+
+```{r}
+seafan_valley <- read_excel(here::here("data/nutrient_data.xlsx"), sheet = "seafan_valley")
+lost_anchor <- read_excel("data/nutrient_data.xlsx", sheet = "lost_anchor")
+holt_rock <- read_excel("data/nutrient_data.xlsx", sheet = "holt_rock")
+whale_rock <- read_excel("data/nutrient_data.xlsx", sheet = "whale_rock")
+antonios_finger <- read_excel("data/nutrient_data.xlsx", sheet = "antonios_finger")
+aquarium <- read_excel("data/nutrient_data.xlsx", sheet = "aquarium")
+plateau_benitier <- read_excel("data/nutrient_data.xlsx", sheet = "plateau_benitier")
+ti_trou <- read_excel("data/nutrient_data.xlsx", sheet = "ti_trou")
+couzoupa <- read_excel("data/nutrient_data.xlsx", sheet = "couzoupa")
+tombant_coco <- read_excel("data/nutrient_data.xlsx", sheet = "tombant_coco")
+ti_pate <- read_excel("data/nutrient_data.xlsx", sheet = "ti_pate")
+```
+
+
+
