@@ -59,31 +59,420 @@ Originally, these dive survey logs, colony measurements, and water-column nutrie
 ## Main data
 ```{r}
 #dive data
-dive <- read_csv(here::here("data/raw_data_dive.csv"))
+dive <- read_csv(here::here("data/raw_data_dive.csv"),
+                 na = c("", ".", "NA", "9999", "ND", "blank"))
 
 #transect data
-transect <- read_csv(here::here("data/transect_data.csv"))
+transect <- read_csv(here::here("data/transect_data.csv"),
+                     na = c("", ".", "NA", "9999", "ND", "blank"))
 
 #GEE current data
-gee_currents <- read_csv(here::here("data/mascarene_gee_currents_2024.csv"))
+gee_currents <- read_csv(here::here("data/mascarene_gee_currents_2024.csv"),
+                         na = c("", ".", "NA", "9999", "ND", "blank"))
 ```
 
 ## Nutrient data
 
 ```{r}
-seafan_valley <- read_excel(here::here("data/nutrient_data.xlsx"), sheet = "seafan_valley")
-lost_anchor <- read_excel("data/nutrient_data.xlsx", sheet = "lost_anchor")
-holt_rock <- read_excel("data/nutrient_data.xlsx", sheet = "holt_rock")
-whale_rock <- read_excel("data/nutrient_data.xlsx", sheet = "whale_rock")
-antonios_finger <- read_excel("data/nutrient_data.xlsx", sheet = "antonios_finger")
-aquarium <- read_excel("data/nutrient_data.xlsx", sheet = "aquarium")
-plateau_benitier <- read_excel("data/nutrient_data.xlsx", sheet = "plateau_benitier")
-ti_trou <- read_excel("data/nutrient_data.xlsx", sheet = "ti_trou")
-couzoupa <- read_excel("data/nutrient_data.xlsx", sheet = "couzoupa")
-tombant_coco <- read_excel("data/nutrient_data.xlsx", sheet = "tombant_coco")
-ti_pate <- read_excel("data/nutrient_data.xlsx", sheet = "ti_pate")
+seafan_valley <- read_excel(here::here("data/nutrient_data.xlsx"), sheet = "seafan_valley", na = c("", ".", "NA", "9999", "ND", "blank"))
+lost_anchor <- read_excel(here::here("data/nutrient_data.xlsx"), sheet = "lost_anchor", na = c("", ".", "NA", "9999", "ND", "blank"))
+holt_rock <- read_excel(here::here("data/nutrient_data.xlsx"), sheet = "holt_rock", na = c("", ".", "NA", "9999", "ND", "blank"))
+whale_rock <- read_excel(here::here("data/nutrient_data.xlsx"), sheet = "whale_rock", na = c("", ".", "NA", "9999", "ND", "blank"))
+antonios_finger <- read_excel(here::here("data/nutrient_data.xlsx"), sheet = "antonios_finger", na = c("", ".", "NA", "9999", "ND", "blank"))
+aquarium <- read_excel(here::here("data/nutrient_data.xlsx"), sheet = "aquarium", na = c("", ".", "NA", "9999", "ND", "blank"))
+plateau_benitier <- read_excel(here::here("data/nutrient_data.xlsx"), sheet = "plateau_benitier", na = c("", ".", "NA", "9999", "ND", "blank"))
+ti_trou <- read_excel(here::here("data/nutrient_data.xlsx"), sheet = "ti_trou", na = c("", ".", "NA", "9999", "ND", "blank"))
+couzoupa <- read_excel(here::here("data/nutrient_data.xlsx"), sheet = "couzoupa", na = c("", ".", "NA", "9999", "ND", "blank"))
+tombant_coco <- read_excel(here::here("data/nutrient_data.xlsx"), sheet = "tombant_coco", na = c("", ".", "NA", "9999", "ND", "blank"))
+ti_pate <- read_excel(here::here("data/nutrient_data.xlsx"), sheet = "ti_pate", na = c("", ".", "NA", "9999", "ND", "blank"))
 ```
 
- 
 
+##Inspecting nutrient data
+```{r inspect}
+seafan_valley
+holt_rock
+lost_anchor
+whale_rock
+ti_pate
+ti_trou
+tombant_coco
+plateau_benitier
+antonios_finger
+couzoupa
+aquarium
+```
+## Binding nutrient data
+```{r bind}
+nutrient_data <- bind_rows(seafan_valley, holt_rock,
+lost_anchor,
+whale_rock,
+ti_pate,
+ti_trou,
+tombant_coco,
+plateau_benitier,
+antonios_finger,
+couzoupa,
+aquarium) 
+# Clean up the environment
+rm(seafan_valley,
+holt_rock,
+lost_anchor,
+whale_rock,
+ti_pate,
+ti_trou,
+tombant_coco,
+plateau_benitier,
+antonios_finger,
+couzoupa,
+aquarium) # Clean up the environment
+```
+
+
+
+# Creating clean_name function
+
+```{r}
+# Helper function to make column names clean snake_case 
+clean_name <- function(df) {
+  names(df) <- names(df) |>
+    str_to_lower() |>
+    str_replace_all("[^a-z0-9]+", "_") |>
+    str_remove_all("^_|_$")
+  df
+}
+```
+
+
+# Standardising
+
+Applying clean_name function to all dataframes and standardising the island and site spelling across all tables
+
+```{r}
+dive_clean <- dive |>
+  clean_name() |>
+  mutate(
+    island = str_squish(island),
+    site   = str_squish(str_to_title(site)),
+    site   = recode(site, "Seafan Valley" = "Sea Fan Valley")
+  )
+
+transect_clean <- transect |>
+  clean_name() |>
+  mutate(
+    island = str_squish(island),
+    site   = str_squish(str_to_title(site)),
+    site   = recode(site, "Seafan Valley" = "Sea Fan Valley")
+  )
+
+nutrients_clean <- nutrient_data |>
+  clean_name() |>
+  mutate(
+    island = str_squish(island),
+    site   = str_squish(str_to_title(site)),
+    site   = recode(site, "Seafan Valley" = "Sea Fan Valley")
+  )
+
+gee_clean <- gee_currents |>
+  clean_name() |>
+  mutate(
+    island = str_squish(island),
+    site   = str_squish(str_to_title(site)),
+    site   = recode(site, "Seafan Valley" = "Sea Fan Valley")
+  ) |>
+  select(island, site, hycom_current_speed = mean)
+```
+
+```{r inspect}
+dive_clean
+transect_clean
+nutrients_clean
+gee_clean
+```
+
+
+#Summarising colony morphometrics
+
+Summarising them per site by finding the mean and standard error
+
+```{r}
+colony_site <- dive_clean |>
+  filter(!is.na(height)) |>
+  group_by(island, site) |>
+  summarise(
+    n_colonies  = n(),
+    mean_height = mean(height, na.rm = TRUE),
+    se_height   = sd(height, na.rm = TRUE) / sqrt(n()),
+    mean_width  = mean(width, na.rm = TRUE),
+    mean_depth  = mean(depth, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+print(colony_site)
+```
+#Summarising lab nutrients and chl_a
+
+summarised by site, calculating the mean and standard error
+
+```{r}
+nutrients_site <- nutrients_clean |>
+  group_by(island, site) |>
+  summarise(
+    across(
+      c(silicate, phosphate, nitrate, chl_a),
+      list(
+        mean = ~ mean(.x, na.rm = TRUE),
+        se   = ~ sd(.x, na.rm = TRUE) / sqrt(sum(!is.na(.x)))
+      ),
+      .names = "{.col}_{.fn}"
+    ),
+    .groups = "drop"
+  ) |>
+  rename(
+    chl_a_lab_mean = chl_a_mean,
+    chl_a_lab_se   = chl_a_se
+  )
+```
+
+
+#Joining all tables in one master_site dataset
+
+```{r}
+master_site <- transect_clean |>
+  left_join(colony_site, by = c("island", "site")) |>
+  left_join(nutrients_site, by = c("island", "site")) |>
+  left_join(gee_clean, by = c("island", "site"))
+
+master_site
+```
+
+
+#Visualising
+
+```{r plots}
+# Plot 1: Mean colony height (+/- SE) across surveyed sites
+p1 <- colony_site |>
+  ggplot(aes(x = reorder(site, mean_height), y = mean_height, fill = island)) +
+  geom_col() +
+  geom_errorbar(
+    aes(ymin = mean_height - se_height, ymax = mean_height + se_height),
+    width = 0.25
+  ) +
+  coord_flip() +
+  labs(
+    x = "Site",
+    y = "Mean Colony Height (cm ± SE)",
+    title = "Gorgonian Colony Height Across Surveyed Reef Sites",
+    fill = "Island"
+  ) +
+  theme_minimal(base_size = 13)
+
+p1
+ggsave(here::here("output/fig1_colony_height_by_site.png"), p1, width = 8, height = 5, dpi = 300)
+
+# Plot 2: Gorgonian density vs. water-column silicate
+p2 <- ggplot(master_site, aes(x = silicate_mean, y = avg_gorgonian_density, color = island)) +
+  geom_point(size = 3.5) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(
+    x = "Mean Silicate (µM)",
+    y = "Mean Gorgonian Density (colonies/m²)",
+    title = "Gorgonian Density vs. Water-Column Silicate",
+    color = "Island"
+  ) +
+  theme_minimal(base_size = 13)
+
+p2
+ggsave(here::here("output/fig2_density_vs_silicate.png"), p2, width = 8, height = 5, dpi = 300)
+
+# Plot 3: Gorgonian density vs. satellite HYCOM current speed (GEE)
+p3 <- master_site |>
+  filter(!is.na(hycom_current_speed)) |>
+  ggplot(aes(x = hycom_current_speed, y = avg_gorgonian_density, color = island)) +
+  geom_point(size = 3.5) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(
+    x = "Mean HYCOM Surface Current Speed (Apr–Jun 2024)",
+    y = "Mean Gorgonian Density (colonies/m²)",
+    title = "Gorgonian Density vs. Regional Ocean Current Speed (GEE)",
+    color = "Island"
+  ) +
+  theme_minimal(base_size = 13)
+
+p3
+ggsave(here::here("output/fig3_density_vs_current.png"), p3, width = 8, height = 5, dpi = 300)
+
+# Plot 4: Colony Height vs. Width across measured colonies
+p_morph <- dive_clean |>
+  filter(!is.na(height), !is.na(width)) |>
+  ggplot(aes(x = width, y = height, color = island, shape = gorgonian_species)) +
+  geom_point(alpha = 0.8, size = 3) +
+  labs(
+    x = "Colony Width (cm)",
+    y = "Colony Height (cm)",
+    title = "Gorgonian Morphometrics Across Mauritius and Rodrigues",
+    color = "Island",
+    shape = "Species"
+  ) +
+  theme_minimal(base_size = 13)
+
+p_morph
+ggsave(here::here("output/fig_morphometrics_scatter.png"), p_morph, width = 8, height = 5, dpi = 300)
+
+# Plot 5: Gorgonian Density across ALL 11 surveyed sites (ordered by density)
+p_all_sites <- master_site |>
+  ggplot(aes(x = reorder(site, avg_gorgonian_density), y = avg_gorgonian_density, color = island)) +
+  geom_segment(
+    aes(xend = reorder(site, avg_gorgonian_density), y = 0, yend = avg_gorgonian_density),
+    linewidth = 1.2
+  ) +
+  geom_point(size = 4) +
+  coord_flip() +
+  labs(
+    x = "Surveyed Site (All 11 Sites)",
+    y = "Mean Gorgonian Density (colonies/m²)",
+    title = "Gorgonian Density Across All Surveyed Sites",
+    subtitle = "Includes zero-density Rodrigues sites to show full spatial baseline",
+    color = "Island"
+  ) +
+  theme_minimal(base_size = 13)
+
+p_all_sites
+ggsave(here::here("output/fig_all_sites_density.png"), p_all_sites, width = 8, height = 5, dpi = 300)
+
+# Plot 6: Site-by-Site Reef Composition: Gorgonian Density vs. Total Coral Cover (all 11 sites)
+p_composition <- master_site |>
+  select(island, site, avg_gorgonian_density, total_coral_cover_pct) |>
+  pivot_longer(
+    cols = c(avg_gorgonian_density, total_coral_cover_pct),
+    names_to = "metric",
+    values_to = "value"
+  ) |>
+  mutate(
+    metric = recode(
+      metric,
+      "avg_gorgonian_density" = "Mean Gorgonian Density",
+      "total_coral_cover_pct" = "Total Coral Cover (%)"
+    )
+  ) |>
+  ggplot(aes(x = reorder(site, value), y = value, fill = island)) +
+  geom_col(show.legend = TRUE) +
+  facet_wrap(~ metric, scales = "free_x") +
+  coord_flip() +
+  labs(
+    x = "Surveyed Site (All 11 Sites)",
+    y = NULL,
+    title = "Gorgonian Density and Total Coral Cover Across All Sites",
+    fill = "Island"
+  ) +
+  theme_minimal(base_size = 12)
+
+p_composition
+ggsave(here::here("output/fig_reef_composition_all_sites.png"), p_composition, width = 9, height = 5.5, dpi = 300)
+
+
+# Plot 7: Multi-Variable Water Chemistry Overview (Faceted across all 4 lab variables)
+p_water_chem <- master_site |>
+  select(island, site, silicate_mean, phosphate_mean, nitrate_mean, chl_a_lab_mean) |>
+  pivot_longer(
+    cols = c(silicate_mean, phosphate_mean, nitrate_mean, chl_a_lab_mean),
+    names_to = "variable",
+    values_to = "mean_val"
+  ) |>
+  filter(!is.na(mean_val)) |>
+  mutate(
+    variable = recode(
+      variable,
+      "silicate_mean"  = "Silicate (µM)",
+      "phosphate_mean" = "Phosphate (µM)",
+      "nitrate_mean"   = "Nitrate (µM)",
+      "chl_a_lab_mean" = "Lab Chl-a"
+    )
+  ) |>
+  ggplot(aes(x = mean_val, y = reorder(site, mean_val), color = island)) +
+  geom_segment(
+    aes(x = 0, xend = mean_val, yend = reorder(site, mean_val)),
+    linewidth = 0.9,
+    alpha = 0.7
+  ) +
+  geom_point(size = 3) +
+  facet_wrap(~ variable, scales = "free_x", nrow = 1) +
+  labs(
+    x = "Site Mean",
+    y = NULL,
+    title = "Water-Column Nutrients and Lab Chlorophyll-a Across Sites",
+    color = "Island"
+  ) +
+  theme_minimal(base_size = 11)
+
+p_water_chem
+ggsave(here::here("output/fig_water_chemistry_overview.png"), p_water_chem, width = 10.5, height = 5.5, dpi = 300)
+```
+
+```{r}
+# 1. Cleaner Reef Composition: ordered consistently by gorgonian density
+p_composition <- master_site |>
+  mutate(site = fct_reorder(site, avg_gorgonian_density)) |>
+  select(island, site, avg_gorgonian_density, total_coral_cover_pct) |>
+  pivot_longer(
+    cols = c(avg_gorgonian_density, total_coral_cover_pct),
+    names_to = "metric",
+    values_to = "value"
+  ) |>
+  mutate(
+    metric = recode(
+      metric,
+      "avg_gorgonian_density" = "Gorgonian Density",
+      "total_coral_cover_pct" = "Total Coral Cover (%)"
+    )
+  ) |>
+  ggplot(aes(x = site, y = value, fill = island)) +
+  geom_col() +
+  facet_wrap(~ metric, scales = "free_x") +
+  coord_flip() +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "Gorgonian Density vs. Total Coral Cover Across Sites",
+    fill = "Island"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(panel.spacing.x = unit(1.2, "lines"))
+
+p_composition
+ggsave(here::here("output/fig_reef_composition_all_sites2.png"), p_composition, width = 9, height = 5.5, dpi = 300)
+
+# 2. Cleaner Water Chemistry: 2x2 grid so axis labels have plenty of breathing room
+p_water_chem <- master_site |>
+  select(island, site, silicate_mean, phosphate_mean, nitrate_mean, chl_a_lab_mean) |>
+  pivot_longer(
+    cols = c(silicate_mean, phosphate_mean, nitrate_mean, chl_a_lab_mean),
+    names_to = "variable",
+    values_to = "mean_val"
+  ) |>
+  filter(!is.na(mean_val)) |>
+  mutate(
+    variable = recode(
+      variable,
+      "silicate_mean"  = "Silicate (µM)",
+      "phosphate_mean" = "Phosphate (µM)",
+      "nitrate_mean"   = "Nitrate (µM)",
+      "chl_a_lab_mean" = "Lab Chl-a"
+    )
+  ) |>
+  ggplot(aes(x = mean_val, y = reorder(site, mean_val), color = island)) +
+  geom_point(size = 3) +
+  facet_wrap(~ variable, scales = "free_x", ncol = 2) +
+  labs(
+    x = "Site Mean",
+    y = NULL,
+    title = "Water-Column Nutrients and Lab Chlorophyll-a by Site",
+    color = "Island"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(panel.spacing = unit(1.1, "lines"))
+
+p_water_chem
+ggsave(here::here("output/fig_water_chemistry_overview2.png"), p_water_chem, width = 9.5, height = 6, dpi = 300)
+```
 
