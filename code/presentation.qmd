@@ -476,3 +476,30 @@ p_water_chem
 ggsave(here::here("output/fig_water_chemistry_overview2.png"), p_water_chem, width = 9.5, height = 6, dpi = 300)
 ```
 
+# USing data from 20 m current 
+
+```{r}
+# 1. Point to the new 20 m export
+gee_currents <- read_csv(
+  here::here("data/mascarene_gee_currents_20m_2024.csv"),
+  na = c("", ".", "NA", "9999", "ND", "blank")
+)
+
+# 2. Run your existing clean_name(), master_site join, and plots as usual,
+#    just updating p3's x-axis label & output filename to 20 m:
+p3 <- master_site |>
+  filter(!is.na(hycom_current_speed)) |>
+  ggplot(aes(x = hycom_current_speed, y = avg_gorgonian_density, color = island)) +
+  geom_point(size = 3.5) +
+  labs(
+    x = "Mean HYCOM Current Speed at 20 m (Apr–Jun 2024)",
+    y = "Mean Gorgonian Density (colonies/m²)",
+    title = "Gorgonian Density vs. Subsurface Current Speed (GEE)",
+    color = "Island"
+  ) +
+  theme_minimal(base_size = 13)
+
+p3
+ggsave(here::here("output/fig3_density_vs_current_20m.png"), p3, width = 8, height = 5, dpi = 300)
+```
+
