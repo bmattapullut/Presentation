@@ -547,7 +547,6 @@ p_size_site <- colony_size_site |>
     x = "Mean Colony Area Proxy (Height × Width, mean ± SE)",
     y = "Site",
     title = "Gorgonian Colony Size Across Survey Sites",
-    subtitle = "Mauritius and Rodrigues reef sites ordered by mean surface-area proxy",
     color = "Island"
   ) +
   theme_minimal(base_size = 10) +
@@ -716,7 +715,7 @@ p_count_depth <- site_depth_counts |>
     x = "Mean Survey Depth (m)",
     y = "Number of Gorgonian Colonies",
     title = "Gorgonian Colony Count vs. Depth by Survey Site",
-    subtitle = "Site indicated by color; island indicated by point shape",
+    
     color = "Site",
     shape = "Island"
   ) +
